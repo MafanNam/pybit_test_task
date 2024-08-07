@@ -76,7 +76,7 @@ $ python bybit_order.py <Coin> <Buy/Sell> <Order Value in USDT> <Leverage>
 ### Example
 
 ```bash
-$ python bybit_order.py BTC buy 1000 10
+$ python bybit_order.py BTC buy 100 10
 ```
 
 This command will open a long position (buy) on BTC with a value of 1000 USDT and leverage of 10x.
