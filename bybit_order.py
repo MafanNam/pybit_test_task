@@ -25,9 +25,9 @@ SECRET_KEY = os.getenv("BYBIT_API_SECRET")
 class FuturesOrders:
     def __init__(self, symbol: str, category: str = "linear"):
         """
-        Конструктор класса и инициализация
-        - клиента pybit
-        - получение параметров и фильтров Инструмента
+        Class constructor and initialization
+        - pybit client
+        - Getting Tool parameters and filters
         """
         self.cl = HTTP(api_key=API_KEY, api_secret=SECRET_KEY, recv_window=60000, testnet=True)
         self.category = category
@@ -36,14 +36,13 @@ class FuturesOrders:
 
     def get_filters(self):
         """
-        Фильтры заданного инструмента
-        - мин размер ордера в Базовой Валюте,
-        - макс размер ордера в БВ
+        Filters of a given instrument
+        - min order size in Base Currency,
+        - max order size in BW
         """
-        r = self.cl.get_instruments_info(symbol=self.symbol, category=self.category)
-        c = r.get('result', {}).get('list', [])[0]
-        print(c)
-        min_qty = c.get('lotSizeFilter', {}).get('minOrderQty', '0.0')
+        res = self.cl.get_instruments_info(symbol=self.symbol, category=self.category)
+        rl = res.get('result', {}).get('list', [])[0]
+        min_qty = rl.get('lotSizeFilter', {}).get('minOrderQty', '0.0')
         qty_decimals = abs(decimal.Decimal(min_qty).as_tuple().exponent)
         min_qty = float(min_qty)
 
@@ -52,29 +51,31 @@ class FuturesOrders:
 
     def get_price(self):
         """
-        Один из способов получения текущей цены
+        Method of obtaining the current price
         """
-        r = float(self.cl.get_tickers(category=self.category, symbol=self.symbol).get('result').get('list')[0].get(
+        res = float(self.cl.get_tickers(category=self.category, symbol=self.symbol).get('result').get('list')[0].get(
             'ask1Price'))
-        self.log(r)
-        return r
+        self.log(res)
+        return res
 
     def get_position(self, key: Optional[str] = None):
         """
-        Получаю текущую позицию
-        :param key:
-        :return:
+        Getting the current position
         """
-        r = self.cl.get_positions(category=self.category, symbol=self.symbol)
-        p = r.get('result', {}).get('list', [])[0]
-        qty = float(p.get('size', '0.0'))
-        if qty <= 0.0: raise Exception("empty position")
+        res = self.cl.get_positions(category=self.category, symbol=self.symbol)
+        if not res.get('result', {}).get('list'):
+            return None
+        rl = res.get('result', {}).get('list', [])[0]
+        qty = float(res.get('size', '0.0'))
+
+        if qty <= 0.0:
+            return None
 
         ret = dict(
-            avg_price=float(p.get('avgPrice', '0.0')),
-            side=p.get('side'),
-            leverage=p.get("leverage"),
-            unrel_pnl=float(p.get('unrealisedPnl', '0.0')),
+            avg_price=float(rl.get('avgPrice', '0.0')),
+            side=rl.get('side'),
+            leverage=rl.get("leverage"),
+            unrel_pnl=float(rl.get('unrealisedPnl', '0.0')),
             qty=qty
         )
         ret['rev_side'] = ("Sell", "Buy")[ret['side'] == 'Sell']
@@ -84,10 +85,7 @@ class FuturesOrders:
 
     def place_market_order_by_base(self, qty: float, side: str):
         """
-        Размещение рыночного ордера с указанием размера ордера в Базовой Валюте (BTC, XRP, etc)
-        :param qty:
-        :param side:
-        :return:
+        Placing a market order specifying the order size in Base Currency (BTC, XRP, etc)
         """
         args = dict(
             category=self.category,
@@ -103,37 +101,36 @@ class FuturesOrders:
         )
         self.log("args", args)
 
-        r = self.cl.place_order(**args)
-        self.log("result", r)
+        res = self.cl.place_order(**args)
+        self.log("result", res)
 
-        return r
+        return res
 
     def place_market_order_by_quote(self, quote: float, side: str):
         """
-        Отправка ордера с размером позиции в Котируемой Валюте (USDT напр)
-        имеет смысл только для контрактов
+        Sending an order with position size in Quoted Currency (USDT e.g.)
+        makes sense only for contracts
         """
         curr_price = self.get_price()
         qty = self.floor_qty(quote / curr_price)
-        print(qty)
-        if qty < self.min_qty: raise Exception(f"{qty} is to small")
-
-        print(qty)
+        if qty < self.min_qty:
+            raise Exception(f"{qty} is to small")
 
         self.place_market_order_by_base(qty, side)
 
     def set_leverage(self, leverage: float):
         """
-
-        :param leverage:
-        :return:
+        Sending an order with position size in Quoted Currency (USDT e.g.) for contracts only
         """
 
-        position = self.get_position()
-        logger.info(f"TEST: {position}")
-        current_leverage = position['leverage']
+        position = self.cl.get_positions(category=self.category, symbol=self.symbol)
 
-        logger.info(f"Current leverage: {current_leverage}, Requested leverage: {leverage}")
+        try:
+            current_leverage = position['result']['list'][0]['leverage']
+            logger.info(f"Current leverage: {current_leverage}, Requested leverage: {leverage}")
+        except Exception as e:
+            logger.error(f"Failed to get leverage: {e}")
+            return
 
         if float(current_leverage) == float(leverage):
             logger.info(f"Leverage is already set to {leverage}x. No need to modify.")
@@ -149,22 +146,23 @@ class FuturesOrders:
 
         self.log("args", args)
 
-        r = self.cl.set_leverage(**args)
-        self.log("result", r)
+        res = self.cl.set_leverage(**args)
+        self.log("result", res)
 
-        return r
+        return res
 
     def log(self, *args):
         """
-        Для удобного вывода из методов класса
+        For convenient derivation from the methods of the class
         """
         caller = inspect.stack()[1].function
         print(f"* {caller}", self.symbol, "\n\t", args, "\n")
 
-    def _floor(self, value, decimals: int):
+    @staticmethod
+    def _floor(value, decimals: int):
         """
-        Для аргументов цены нужно отбросить (округлить вниз)
-        до колва знаков заданных в фильтрах цены
+        For the price arguments, you need to round down
+        to the number of digits set in the price filters
         """
         factor = 1 / (10 ** decimals)
         return (value // factor) * factor
@@ -190,8 +188,6 @@ def main():
     leverage = args.leverage
     side = 'Buy' if args.side == 'buy' else 'Sell'
 
-    # logger.info(f"{type(order_value)}, {order_value}")
-
     try:
         f = FuturesOrders(symbol=symbol, category='linear')
 
@@ -201,12 +197,13 @@ def main():
         pass
 
     except exceptions.InvalidRequestError as e:
-        print("ByBit API Request Error", e.status_code, e.message, sep=" | ")
+        logger.error(f"ByBit API Request Error | {e.status_code} | {e.message}")
     except exceptions.FailedRequestError as e:
-        print("HTTP Request Failed", e.status_code, e.message, sep=" | ")
+        logger.error(f"HTTP Request Failed | {e.status_code} | {e.message}")
     except Exception as e:
-        raise e
-        # print(e)
+        logger.error(f"Other Error | {e}")
+
+    logger.info(f"Market order on {symbol} {side} for {order_value} USDT with leverage {leverage}x")
 
 
 if __name__ == '__main__':
