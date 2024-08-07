@@ -11,10 +11,10 @@ from pybit.unified_trading import HTTP
 import logging
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# .env file
 load_dotenv()
 
-# Set up logging
+# set up logging
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
