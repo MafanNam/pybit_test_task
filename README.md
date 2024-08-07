@@ -9,6 +9,17 @@ allows you to place market orders with specified leverage and order value.
 - Set leverage for the order.
 - Designed for the Bybit Testnet environment.
 
+![run1](https://raw.githubusercontent.com/MafanNam/pybit_test_task/main/assets/run1.png)
+![order1](https://raw.githubusercontent.com/MafanNam/pybit_test_task/main/assets/order1.png)
+
+![run2](https://raw.githubusercontent.com/MafanNam/pybit_test_task/main/assets/run2.png)
+![order2](https://raw.githubusercontent.com/MafanNam/pybit_test_task/main/assets/order2.png)
+
+![run3](https://raw.githubusercontent.com/MafanNam/pybit_test_task/main/assets/run3.png)
+![order3](https://raw.githubusercontent.com/MafanNam/pybit_test_task/main/assets/order3.png)
+
+![all_orders](https://raw.githubusercontent.com/MafanNam/pybit_test_task/main/assets/all_orders.png)
+
 ### Requirements
 
 - Python 3.10 or later
