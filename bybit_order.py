@@ -42,6 +42,7 @@ class FuturesOrders:
         """
         res = self.cl.get_instruments_info(symbol=self.symbol, category=self.category)
         rl = res.get('result', {}).get('list', [])[0]
+        print(rl)
         min_qty = rl.get('lotSizeFilter', {}).get('minOrderQty', '0.0')
         qty_decimals = abs(decimal.Decimal(min_qty).as_tuple().exponent)
         min_qty = float(min_qty)
@@ -99,6 +100,7 @@ class FuturesOrders:
             closeOnTrigger=False,
             orderLinkId=f"{self.symbol}_{time.time()}"
         )
+        print(self.floor_qty(qty))
         self.log("args", args)
 
         res = self.cl.place_order(**args)
@@ -168,6 +170,7 @@ class FuturesOrders:
         return (value // factor) * factor
 
     def floor_qty(self, value):
+        print(self.qty_decimals)
         return self._floor(value, self.qty_decimals)
 
 
@@ -194,7 +197,8 @@ def main():
         f.set_leverage(leverage)
         f.place_market_order_by_quote(order_value, side)
         f.get_position()
-        pass
+
+        logger.info(f"Market order on {symbol} {side} for {order_value} USDT with leverage {leverage}x")
 
     except exceptions.InvalidRequestError as e:
         logger.error(f"ByBit API Request Error | {e.status_code} | {e.message}")
@@ -202,8 +206,6 @@ def main():
         logger.error(f"HTTP Request Failed | {e.status_code} | {e.message}")
     except Exception as e:
         logger.error(f"Other Error | {e}")
-
-    logger.info(f"Market order on {symbol} {side} for {order_value} USDT with leverage {leverage}x")
 
 
 if __name__ == '__main__':
