@@ -134,7 +134,7 @@ class FuturesOrders:
 
         if float(current_leverage) == float(leverage):
             logger.info(f"Leverage is already set to {leverage}x. No need to modify.")
-            return
+            return "NOT MODIFIED"
 
         # Set new leverage
         args = dict(
